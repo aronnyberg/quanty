@@ -1,0 +1,9 @@
+# exclude all data, authorisation
+
+/dwx-zeromq-connector-master
+/config/auth_config.json
+/Data
+*.xlsx
+*.obj
+*.csv
+/brokerage/darwinex/dwx-zeromq-connector-master.py
