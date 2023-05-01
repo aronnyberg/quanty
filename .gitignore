@@ -1,4 +1,4 @@
-# exclude all data, authorisation
+# exclude all data and authorisation
 
 /dwx-zeromq-connector-master
 /config/auth_config.json
