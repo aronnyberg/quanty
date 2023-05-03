@@ -3,7 +3,9 @@
 /dwx-zeromq-connector-master
 /config/auth_config.json
 /Data
+/backtests
 *.xlsx
 *.obj
 *.csv
+*.png
 /brokerage/darwinex/dwx-zeromq-connector-master.py
