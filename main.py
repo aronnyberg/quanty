@@ -387,24 +387,26 @@ def main():
     print(f"Expected to have {sum([abs(i['nominal_exposure']) for i in portfolio_optimal.values()])} $ of gross (abs) exposure, excluding inertia")
     print(f"{[i for i in strategies_inactivated]} strategies were deactivated today")
 
+    inactive_strategies_df = pd.read_csv('inactive_strategies.csv')
+    inactive_strategies_df.set_index('Date', inplace=True)
+    inactive_strategies_df.loc[trade_on_date] = [strategies_inactivated]
+    pd.DataFrame(inactive_strategies_df).to_csv('inactive_strategies.csv')
+
 if __name__ == "__main__":
     main()
 
-#if run with python main.py -mode 'test' runs without running new data
 #is skprm not working?
 
 #create 'train' argparse where we train the classifier, 
 # by default to just use the pre-trained
 #still need to add the use of classifier in normal main
 
-# the testversion should not save data in any way as just 4 instruments
-
-#change get_live classifier into loading and training 
-
 #obj files not working 
-
-#test the RF classifier
 
 #use logger instead of prints
 
-#study why historic_df is built the way it is
+# database_df is the ohlcv, historic_data has extend_dataframe applied to it
+
+#delete dwx runs
+
+#dates on ohlcv data not coming out correct?
