@@ -397,10 +397,6 @@ if __name__ == "__main__":
 
 #is skprm not working?
 
-#create 'train' argparse where we train the classifier, 
-# by default to just use the pre-trained
-#still need to add the use of classifier in normal main
-
 #obj files not working 
 
 #use logger instead of prints
@@ -410,3 +406,5 @@ if __name__ == "__main__":
 #delete dwx runs
 
 #dates on ohlcv data not coming out correct?
+
+#error on skprm line 90 loc 
