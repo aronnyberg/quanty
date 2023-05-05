@@ -408,3 +408,7 @@ if __name__ == "__main__":
 #dates on ohlcv data not coming out correct?
 
 #error on skprm line 90 loc 
+
+#add code which lets me know when ohlcv data hasn't been received in a couple of days consequtively. Very disruptive to code
+
+# why are their brokerage specific instrument configs if there's no try 'instrument' catching
