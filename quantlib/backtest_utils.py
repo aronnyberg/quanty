@@ -105,7 +105,6 @@ def kpis(df):
 
 
 def classifier_data_transform(database_df, strat_df):
-    
     df_ = pd.concat([database_df, strat_df], axis=1)
     X_process = df_[database_df.columns]
     X_process = X_process.replace([np.nan, np.inf, -np.inf], 0)

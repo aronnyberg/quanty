@@ -37,7 +37,6 @@ from subsystems.SKPRM.subsys import Skprm
 import logging
 logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
-
 with open("config/auth_config.json", "r") as f:
     auth_config = json.load(f)
 
@@ -56,9 +55,10 @@ if brokerage_used == "oan":
     brokerage = Oanda(brokerage_config=brokerage_config, auth_config=auth_config)
     #crypto not available by OANDA at the moment
     db_instruments = brokerage_config["fx"] +  brokerage_config["indices"] + brokerage_config["commodities"] + brokerage_config["metals"] + brokerage_config["bonds"]# + brokerage_config["crypto"]
-#elif brokerage_used == "dwx":
-#    brokerage = Darwinex(brokerage_config=brokerage_config, auth_config=auth_config)
-#    db_instruments = brokerage_config["fx"] +  brokerage_config["indices"] + brokerage_config["commodities"]  + brokerage_config["equities"]
+
+elif brokerage_used == "dwx":
+    db_instruments = brokerage_config["fx"] +  brokerage_config["indices"] + brokerage_config["commodities"]  + brokerage_config["equities"]
+    brokerage = Darwinex(brokerage_config=brokerage_config, auth_config=auth_config)
 else:
     print("unknown brokerage, try again.")
     exit()
@@ -90,6 +90,7 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
     start = max(test_ranges, key=lambda x:[0])[0]
     print(start) #start running the combined strategy from 2012-02-09 onwards, since that is when all the 3 strategy data is available
 
+    
     if not use_disk:
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
         portfolio_df.loc[0, "capital"] = 10000
@@ -178,6 +179,7 @@ def main():
 
     #by default, main does not train the classifier
     run_live_classifier = False
+    use_disk = portfolio_config["use_disk"]
     #if running test , only loads from disk
     # Instantiate the parser
     parser = argparse.ArgumentParser(description="Sets mode for main.py run")
@@ -187,12 +189,11 @@ def main():
     args = parser.parse_args()
     mode = args.mode
     if mode == 'test':
-        portfolio_config["use_disk"] == True
+        use_disk = True
     if mode == 'train':
         #train the classifier now
         run_live_classifier = True
 
-    use_disk = portfolio_config["use_disk"]
     poll_df = pd.DataFrame()
     for db_inst in db_instruments:
         tries = 0
@@ -233,6 +234,7 @@ def main():
     """
     historical_data = du.extend_dataframe(traded=db_instruments, df=database_df, fx_codes=brokerage_config["fx_codes"])
     
+    historical_data.to_csv('testData.csv')
     print('02: extended df')
     """
     Risk Parameters
@@ -246,15 +248,13 @@ def main():
     capital = brokerage.get_trade_client().get_account_capital()
     # is in units
     positions = brokerage.get_trade_client().get_account_positions()
-    print('03: capital and positions',capital, positions)
+    print('03: capital and positions')
     
     """
     Get Position of Subsystems
     """ 
     subsystems_config = portfolio_config["subsystems"][brokerage_used]
     strats = {}
-
-
     
     for subsystem in subsystems_config.keys():
         if subsystem == "lbmom":
@@ -308,6 +308,7 @@ def main():
             }
         else:
             strategies_inactivated.append(k)
+    #traded is the list of all brokerage instruments    
     traded = list(set(traded))
 
     # this is where trades are bundled together, in subsystems_dict
@@ -316,7 +317,8 @@ def main():
 
     instruments_held = positions.keys()
     instruments_unheld = [inst for inst in traded if inst not in instruments_held]
-
+    instruments_held_not_in_traded = [inst for inst in instruments_held if inst not in traded]
+    #logging.warning(instruments_held)
     """
     Get Optimal Allocations
     """
@@ -324,7 +326,11 @@ def main():
     capital_scalar = capital / portfolio_df.loc[trade_on_date, "capital"]
     portfolio_optimal = {}
 
-    for inst in traded:
+    #currently ignoring existing positions that are not active?
+    print(instruments_held_not_in_traded) 
+    for inst in traded+instruments_held_not_in_traded:
+        if inst[:7] == 'USD_CAD':
+            logging.warning('USD_CAD line 333')
         unscaled_optimal = portfolio_df.loc[trade_on_date, "{} units".format(inst)]
         scaled_units = unscaled_optimal * capital_scalar
         portfolio_optimal[inst] = {
@@ -341,6 +347,7 @@ def main():
     """
     for inst_held in instruments_held:
         Printer.pretty(left="\n******************************************************", color=Colors.BLUE)
+        print(inst_held)
         order_config = brokerage.get_service_client().get_order_specs(
             inst=inst_held,
             units=portfolio_optimal[inst_held]["scaled_units"],

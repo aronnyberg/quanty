@@ -34,12 +34,15 @@ class Skprm:
     """
 
     def extend_historicals(self, instruments, historical_data):
-        for date in historical_data.index:
-            for inst in instruments:
-                rolling_returns = historical_data.loc[:date].tail(60)["{} % ret".format(inst)]
-                skewness = skew(rolling_returns)
-                historical_data.loc[date, "{} skew".format(inst)] = skewness
+        historical_data.to_csv('testData1.csv')
+        skew_roll = historical_data[[inst + " % ret" for inst in instruments]].rolling(20).apply(skew)
+        #skew_instruments = [i[:-5] for i in skew_roll.columns]
+        skew_roll.columns = skew_roll.columns + ' skew'
+        historical_data = pd.concat([historical_data, skew_roll], axis=1)
+        historical_data.to_csv('testData2.csv')
         return historical_data
+     
+    
 
     def run_simulation(self, historical_data, debug=False, use_disk=False):
         """
@@ -51,6 +54,7 @@ class Skprm:
             + self.instruments_config["metals"] + self.instruments_config["bonds"] + self.instruments_config["crypto"]
         if not use_disk:
             historical_data = self.extend_historicals(instruments=instruments, historical_data=historical_data)
+            
             
             portfolio_df = pd.DataFrame(index=historical_data[self.simulation_start:].index).reset_index()
             portfolio_df.loc[0, "capital"] = 10000
@@ -73,7 +77,8 @@ class Skprm:
                 date = portfolio_df.loc[i, "date"]
                 strat_scalar = 2 #strategy scalar (refer to post)
 
-                tradable = [inst for inst in instruments if not is_halted(inst, date)]
+                #tradable = [inst for inst in instruments if not is_halted(inst, date)]
+                tradable = [inst for inst in instruments]
                 non_tradable = [inst for inst in instruments if inst not in tradable]
 
 
@@ -87,6 +92,9 @@ class Skprm:
                     strat_scalar = backtest_utils.get_strat_scaler(portfolio_df, lookback=100, vol_target=self.vol_target, idx=i, default=strat_scalar)
                     #now, our strategy leverage / scalar should dynamically equilibriate to achieve target exposure, we see that in fact this is the case!
 
+                print(i)
+                print(strat_scalar)
+
                 portfolio_df.loc[i, "strat scalar"] = strat_scalar
 
                 """
@@ -99,7 +107,7 @@ class Skprm:
 
                 skews = {}
                 for inst in tradable:
-                    skews[inst] = historical_data.loc[date, "{} skew".format(inst)]
+                    skews[inst] = historical_data.loc[date, "{} % ret skew".format(inst)]
                 skews = {k:v for k,v in sorted(skews.items(), key=lambda pair:pair[1])}
                 quantile_size = int(len(tradable) * 0.25)
                 high_skewness = list(skews.keys())[-quantile_size:]
