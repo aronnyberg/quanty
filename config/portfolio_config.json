@@ -30,8 +30,9 @@
 
     "subsystems": {
         "oan":{
-            "lbmom":0.50,
-            "lsmom":0.50
+            "lbmom":0.40,
+            "lsmom":0.40,
+            "skprm":0.20
         },
         "oanOriginal,skprm not working": {
             "lbmom": 0.40,
