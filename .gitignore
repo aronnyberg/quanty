@@ -9,4 +9,4 @@
 *.csv
 *.png
 /brokerage/darwinex/dwx-zeromq-connector-master.py
-/Diagnostics
+/diagnostics
