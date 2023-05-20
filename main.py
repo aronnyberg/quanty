@@ -130,6 +130,7 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
             for inst in instruments:
                 combined_sizing = 0
                 for subsystem in subsystems_dict.keys():
+                    #incrementally adding the total assets for each instrument by strategy
                     combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
                 position = combined_sizing * strat_scalar
                 portfolio_df.loc[i, "{} units".format(inst)] = position
@@ -412,3 +413,21 @@ if __name__ == "__main__":
 #add code which lets me know when ohlcv data hasn't been received in a couple of days consequtively. Very disruptive to code
 
 # why are their brokerage specific instrument configs if there's no try 'instrument' catching
+
+#capital based on brokerage assets, but hard value that if pushed sends an error
+# better method of asset allocation between strategies
+#  Probably based on backtests, slow moving 
+
+# Components to sizing:
+#raw units of each instruments determined in subdf (r) line 123
+# subunits determined in line 124 (multiplied subdf units by subdf capital / portfolio capital)
+
+#get_strat_scaler (backtest_utils) that targets a vol across a srategy
+# This comes together with combined_sizing to form 'position' in main line 134
+# Combined sizing is the config determined weighting
+#position is the units of each insturment
+
+# Multiple different ways to impact intra-strategy weighting (by subsys inital capital)
+# By config weights
+
+#The whole system runs capital for a 10,000 account, until capital_scaler on line 325 when everything scaled accordingly

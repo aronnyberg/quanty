@@ -139,7 +139,7 @@ def run_strategy_classifier(database_df, strat_df, run_live_classifier):
 
     # if RF thinks the strategy will lose money for the latest data gathered
     if clf.predict(X) == [0]:
-        # If clf predicts 0, then clf thinks we WON'T lose money
+        # If clf predicts 0 (binary prediction), then clf thinks we WON'T lose money
         return True
     else:
         return False
