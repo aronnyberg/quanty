@@ -10,5 +10,6 @@ position is the units of each insturment
 Multiple different ways to impact intra-strategy weighting 
 * by subsys inital capital
 * By config weights
+* By subsys vol target (although currently 1 input (20%) into portfolio_config)
 
 The whole system runs capital for a 10,000 account, until capital_scaler on line 325 when everything scaled accordingly

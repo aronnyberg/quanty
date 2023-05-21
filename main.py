@@ -88,7 +88,6 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
     for subsystem in subsystems_dict.keys():
         test_ranges.append(subsystems_dict[subsystem]["strat_df"].index)
     start = max(test_ranges, key=lambda x:[0])[0]
-    print(start) #start running the combined strategy from 2012-02-09 onwards, since that is when all the 3 strategy data is available
 
     if not use_disk:
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
@@ -109,13 +108,13 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                 pnl, nominal_ret = backtest_utils.get_backtest_day_stats(portfolio_df, instruments, date, date_prev, i, historical_data)
                 #Obtain strategy scalar
                 strat_scalar = backtest_utils.get_strat_scaler(portfolio_df, lookback=100, vol_target=portfolio_vol, idx=i, default=strat_scalar)
-                #now, our strategy leverage / scalar should dynamically equilibriate to achieve target exposure, we see that in fact this is the case!
 
             portfolio_df.loc[i, "strat scalar"] = strat_scalar
 
             """
             Get Positions
             """
+            #applying portfolio/brokerage weighting
             inst_units = {}
             for inst in instruments:
                 inst_dict = {}
@@ -125,18 +124,22 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                     subscalar = portfolio_df.loc[i, "capital"] / subdf.loc[date, "capital"] if date in subdf.index else 0
                     inst_dict[subsystem] = subunits * subscalar
                 inst_units[inst] = inst_dict
+            #structure output is inst_units = {'inst':{'brokerage':weighted_instrument_units }}
 
+            #adjust across brokerages
             nominal_total = 0            
             for inst in instruments:
                 combined_sizing = 0
                 for subsystem in subsystems_dict.keys():
-                    #incrementally adding the total assets for each instrument by strategy
+                    #incrementally adding/subtracting the total assets for each instrument by strategy
                     combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
                 position = combined_sizing * strat_scalar
                 portfolio_df.loc[i, "{} units".format(inst)] = position
                 if position != 0:
+                    #total gross per asset
                     nominal_total += abs(position * backtest_utils.unit_dollar_value(inst, historical_data, date))
             
+            # outputting instrument weights (abs(units)/units) giving % of portfolio assets
             for inst in instruments:
                 units = portfolio_df.loc[i, "{} units".format(inst)]
                 if units != 0:
@@ -146,6 +149,7 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                 else:
                     portfolio_df.loc[i, "{} w".format(inst)] = 0
 
+            #each strategy creates it's own leverage, which needs to be capped
             nominal_total = backtest_utils.set_leverage_cap(portfolio_df, instruments, date, i, nominal_total, 10, historical_data)
 
             """
@@ -396,38 +400,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-#is skprm not working?
-
-#obj files not working 
-
-#use logger instead of prints
-
-# database_df is the ohlcv, historic_data has extend_dataframe applied to it
-
-#delete dwx runs
-
-#dates on ohlcv data not coming out correct?
-
-#error on skprm line 90 loc 
-
-#add code which lets me know when ohlcv data hasn't been received in a couple of days consequtively. Very disruptive to code
-
-# why are their brokerage specific instrument configs if there's no try 'instrument' catching
-
-#capital based on brokerage assets, but hard value that if pushed sends an error
-# better method of asset allocation between strategies
-#  Probably based on backtests, slow moving 
-
-# Components to sizing:
-#raw units of each instruments determined in subdf (r) line 123
-# subunits determined in line 124 (multiplied subdf units by subdf capital / portfolio capital)
-
-#get_strat_scaler (backtest_utils) that targets a vol across a srategy
-# This comes together with combined_sizing to form 'position' in main line 134
-# Combined sizing is the config determined weighting
-#position is the units of each insturment
-
-# Multiple different ways to impact intra-strategy weighting (by subsys inital capital)
-# By config weights
-
-#The whole system runs capital for a 10,000 account, until capital_scaler on line 325 when everything scaled accordingly
