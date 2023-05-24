@@ -34,24 +34,3 @@ def optimal_portfolio(returns):
     return np.asarray(wt), returns, risks
 
 
-lbmom = pd.read_excel("./backtests/oan_LBMOM.xlsx")
-lsmom = pd.read_excel("./backtests/oan_LSMOM.xlsx")
-skprm = pd.read_excel("./backtests/oan_SKPRM.xlsx")
-
-lbmom.set_index('date', inplace=True)
-lsmom.set_index('date', inplace=True)
-skprm.set_index('date', inplace=True)
-
-lbmom_ret = lbmom['capital ret']
-lsmom_ret = lsmom['capital ret']
-skprm_ret = skprm['capital ret']
-
-df_ret = pd.concat([lbmom_ret, lsmom_ret, skprm_ret], axis=1)
-
-df_ret.columns = ['lbmom', 'lsmom', 'skprm']
-
-df_ret.dropna(inplace=True)
-
-weights, _, _ = optimal_portfolio(df_ret.T)
-
-[print(i) for i in weights]

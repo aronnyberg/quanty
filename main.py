@@ -34,6 +34,9 @@ from subsystems.LBMOM.subsys import Lbmom
 from subsystems.LSMOM.subsys import Lsmom
 from subsystems.SKPRM.subsys import Skprm
 
+from portfolio_allocation import optimal_portfolio
+import numpy as np
+
 import logging
 logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
@@ -93,6 +96,20 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
         portfolio_df.loc[0, "capital"] = 10000
 
+        subsystems_config
+        #HERE
+        combined_strategies = pd.DataFrame()
+        for subsystem in subsystems_config.keys():
+            each_strategy_backtest = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem))
+            each_strategy_backtest.set_index('date', inplace=True)
+            each_strategy_backtest = each_strategy_backtest['capital ret']
+            combined_strategies = pd.concat([combined_strategies, each_strategy_backtest], axis=1)
+        combined_strategies.columns = subsystems_dict.keys()
+        combined_strategies.replace(0, np.nan, inplace=True)
+        combined_strategies.dropna(inplace=True)
+        weights, _, _ = optimal_portfolio(combined_strategies.T)
+        combined_strategies.to_excel("testData.xlsx")
+
 
         """
         Run Simulation
@@ -126,13 +143,19 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                 inst_units[inst] = inst_dict
             #structure output is inst_units = {'inst':{'brokerage':weighted_instrument_units }}
 
+
+
             #adjust across brokerages
             nominal_total = 0            
             for inst in instruments:
                 combined_sizing = 0
                 for subsystem in subsystems_dict.keys():
                     #incrementally adding/subtracting the total assets for each instrument by strategy
-                    combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
+                    #combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
+                    #multiplying by 'weights' (markowitz derived allocations)
+                    combined_sizing += inst_units[inst][subsystem] * weights[list(subsystems_dict.keys()).index(subsystem)]
+                    logging.error(weights[list(subsystems_dict.keys()).index(subsystem)])
+
                 position = combined_sizing * strat_scalar
                 portfolio_df.loc[i, "{} units".format(inst)] = position
                 if position != 0:

@@ -13,5 +13,7 @@ Better method of asset allocation between strategies. Perhaps based on backtests
 -> Looking into why each subsys has internal leverage, and internal sizing
 
 -> Portfolio allocation probably ought to use Markowitz
+-> Done but need to test
 
 ->Desperately need more strategies
+-> Next

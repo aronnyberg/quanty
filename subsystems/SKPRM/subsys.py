@@ -34,12 +34,10 @@ class Skprm:
     """
 
     def extend_historicals(self, instruments, historical_data):
-        historical_data.to_csv('testData1.csv')
         skew_roll = historical_data[[inst + " % ret" for inst in instruments]].rolling(20).apply(skew)
         #skew_instruments = [i[:-5] for i in skew_roll.columns]
         skew_roll.columns = skew_roll.columns + ' skew'
         historical_data = pd.concat([historical_data, skew_roll], axis=1)
-        historical_data.to_csv('testData2.csv')
         return historical_data
 
     def run_simulation(self, historical_data, debug=False, use_disk=False):
