@@ -10,3 +10,7 @@
 *.png
 /brokerage/darwinex/dwx-zeromq-connector-master.py
 /diagnostics
+/__pycache__
+/.DS_Store
+/backtests
+.ipynb_checkpoints
