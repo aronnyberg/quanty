@@ -17,3 +17,6 @@ Better method of asset allocation between strategies. Perhaps based on backtests
 
 ->Desperately need more strategies
 -> Next
+-> Update gitignore
+
+-> Regime switching, test markowitz on distinct regimes? Binarr regime with classifier? Probably depends on n

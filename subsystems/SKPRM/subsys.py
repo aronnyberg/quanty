@@ -12,11 +12,13 @@ import quantlib.backtest_utils as backtest_utils
 import quantlib.indicators_cal as indicators_cal
 import quantlib.general_utils as general_utils
 import quantlib.diagnostics_utils as diagnostic_utils
+import datetime
 
 class Skprm:
 
-    def __init__(self, instruments_config, historical_df, simulation_start, vol_target, brokerage_used):
+    def __init__(self, instruments_config, historical_df, historical_strategy_df, simulation_start, vol_target, brokerage_used, logger):
         self.historical_df = historical_df
+        self.historical_strategy_df = historical_strategy_df
         self.simulation_start = simulation_start
         self.vol_target = vol_target #we adopt the volatility targetting risk framework. 
         #https://hangukquant.substack.com/p/volatility-targeting-the-strategy
@@ -25,6 +27,7 @@ class Skprm:
             self.instruments_config = json.load(f)
         self.brokerage_used = brokerage_used
         self.sysname = "SKPRM"
+        self.logger = logger
 
     """
     Let's Implement the Strategy `API`: this is what the class Lbmom `promises` to implement other components of the trading system
@@ -40,7 +43,8 @@ class Skprm:
         historical_data = pd.concat([historical_data, skew_roll], axis=1)
         return historical_data
 
-    def run_simulation(self, historical_data, debug=False, use_disk=False):
+    def run_simulation(self, historical_data, historical_strategy_df, debug=False, use_disk=False):
+        logger = self.logger
         """
         Init Params + Pre-processing
         """
@@ -49,6 +53,10 @@ class Skprm:
         instruments = self.instruments_config["fx"] +  self.instruments_config["indices"] + self.instruments_config["commodities"] \
             + self.instruments_config["metals"] + self.instruments_config["bonds"] + self.instruments_config["crypto"]
         if not use_disk:
+            historical_strategy_df.set_index('date', inplace=True)
+            #historical_strategy_df.index = pd.to_datetime(historical_strategy_df.index, unit='H', dayfirst=True)
+            historical_strategy_df.index = pd.to_datetime(historical_strategy_df.index, format='%d-%m-%Y-%H-%M')
+            historical_data = historical_data[historical_data.index > historical_strategy_df.index[-1]]
             historical_data = self.extend_historicals(instruments=instruments, historical_data=historical_data)
             
             portfolio_df = pd.DataFrame(index=historical_data[self.simulation_start:].index).reset_index()
@@ -135,9 +143,11 @@ class Skprm:
                 """
                 portfolio_df.loc[i, "nominal"] = nominal_total
                 portfolio_df.loc[i, "leverage"] = nominal_total / portfolio_df.loc[i, "capital"]
-                if debug: print(portfolio_df.loc[i])
             
             portfolio_df.set_index("date", inplace=True)
+
+            portfolio_df = pd.concat([historical_strategy_df, portfolio_df], axis=0)
+
             diagnostic_utils.save_backtests(
                 portfolio_df=portfolio_df, instruments=instruments, brokerage_used=self.brokerage_used, sysname=self.sysname
             )
@@ -151,5 +161,5 @@ class Skprm:
         return portfolio_df, instruments
 
     def get_subsys_pos(self, debug, use_disk):
-        portfolio_df, instruments = self.run_simulation(historical_data=self.historical_df, debug=debug, use_disk=use_disk)
+        portfolio_df, instruments = self.run_simulation(historical_data=self.historical_df, historical_strategy_df = self.historical_strategy_df, debug=debug, use_disk=use_disk)
         return portfolio_df, instruments

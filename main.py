@@ -38,7 +38,30 @@ from portfolio_allocation import optimal_portfolio
 import numpy as np
 
 import logging
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+#create logger
+logger = logging.getLogger(__name__)
+#set logging level
+logger.setLevel(logging.DEBUG)
+#create console handler and set logging level
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+now = datetime.datetime.now()
+date_time_string = now.strftime('%d-%m-%Y-%H-%M')
+file_handler = logging.FileHandler(f'logs/{date_time_string}_log_file.txt')
+file_handler.setLevel(logging.DEBUG)
+
+#create formatter
+formatter = logging.Formatter('%asctime)s - %(name)s - %(levelname)s - %(message)s\n')
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+#example log:
+logger.debug('error message')
+#except Exception as e:
+# logger.debug(f'!!error message {e}')
+
+
 
 
 with open("config/auth_config.json", "r") as f:
@@ -91,24 +114,20 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
     for subsystem in subsystems_dict.keys():
         test_ranges.append(subsystems_dict[subsystem]["strat_df"].index)
     start = max(test_ranges, key=lambda x:[0])[0]
-
     if not use_disk:
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
         portfolio_df.loc[0, "capital"] = 10000
 
-        subsystems_config
-        #HERE
         combined_strategies = pd.DataFrame()
         for subsystem in subsystems_config.keys():
             each_strategy_backtest = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem))
             each_strategy_backtest.set_index('date', inplace=True)
             each_strategy_backtest = each_strategy_backtest['capital ret']
             combined_strategies = pd.concat([combined_strategies, each_strategy_backtest], axis=1)
-        combined_strategies.columns = subsystems_dict.keys()
+        combined_strategies.columns = [i for i in subsystems_dict.keys()]
         combined_strategies.replace(0, np.nan, inplace=True)
         combined_strategies.dropna(inplace=True)
         weights, _, _ = optimal_portfolio(combined_strategies.T)
-        combined_strategies.to_excel("testData.xlsx")
 
 
         """
@@ -154,7 +173,7 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                     #combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
                     #multiplying by 'weights' (markowitz derived allocations)
                     combined_sizing += inst_units[inst][subsystem] * weights[list(subsystems_dict.keys()).index(subsystem)]
-                    logging.error(weights[list(subsystems_dict.keys()).index(subsystem)])
+                    
 
                 position = combined_sizing * strat_scalar
                 portfolio_df.loc[i, "{} units".format(inst)] = position
@@ -192,6 +211,7 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
         )
     else:
         portfolio_df = gu.load_file("./backtests/{}_{}.obj".format(brokerage_used, "_"))
+        logger.debug(str(datetime.datetime.now())+'Not using no loads!')
 
     return portfolio_df
 
@@ -200,7 +220,7 @@ def main():
     """
     Load and Update the Database
     """
-    database_df = gu.load_file("./Data/{}_ohlcv.obj".format(brokerage_used))
+    #database_df = gu.load_file("./Data/{}_ohlcv.obj".format(brokerage_used))
     database_df = pd.read_excel("./Data/{}".format(db_file)).set_index("date")
     database_df = database_df.loc[~database_df.index.duplicated(keep="first")] 
 
@@ -209,7 +229,7 @@ def main():
     #if running test , only loads from disk
     # Instantiate the parser
     parser = argparse.ArgumentParser(description="Sets mode for main.py run")
-    parser.add_argument('--mode', metavar='mode', type=str,
+    parser.add_argument("--mode", type=str,
                     help='Optional argument indicating a quick test run (using disk data) or train (run classifier), else runs as normal (loads data, no training)',
                     required = False, default = "")
     args = parser.parse_args()
@@ -227,7 +247,9 @@ def main():
         again = True
         while again:
             try:
-                df = brokerage.get_trade_client().get_ohlcv(instrument=db_inst, count=30, granularity="D")
+                #df = brokerage.get_trade_client().get_ohlcv(instrument=db_inst, count=30, granularity="D")
+                df = brokerage.get_trade_client().get_hourly_ohlcv(instrument=db_inst, count=30, granularity="H1")
+                #df_hourly = brokerage.get_trade_client().get_ohlcv(instrument=db_inst, count=100, granularity="H1")
                 df.set_index("date", inplace=True)
                 #print(db_inst, "\n", df)
                 cols = list(map(lambda x: "{} {}".format(db_inst, x), df.columns)) 
@@ -245,10 +267,11 @@ def main():
                     print("Check TCP Socket Connection, rerun application")
                     exit()
    
-    database_df = database_df.loc[:poll_df.index[0]][:-1]
+    #database_df = database_df.loc[:poll_df.index[0]][:-1]
     #database_df = database_df.append(poll_df)
+    poll_df = poll_df.loc[database_df.index[-1]:].iloc[1:]
     database_df = pd.concat([database_df, poll_df],axis=0)
-    print('01: Appened df')
+    logger.debug(str(datetime.datetime.now())+'01: Appended df')
     #print(database_df)
 
     #Saving as other file names for now
@@ -261,11 +284,12 @@ def main():
     """
     historical_data = du.extend_dataframe(traded=db_instruments, df=database_df, fx_codes=brokerage_config["fx_codes"])
     
-    print('02: extended df')
+    logger.debug(str(datetime.datetime.now())+'02: Extended df')
     """
     Risk Parameters
     """
     VOL_TARGET = portfolio_config["vol_target"]
+    #sim_start not currently implemented
     sim_start = datetime.date.today() - relativedelta(years=portfolio_config["sim_years"])
 
     """
@@ -274,40 +298,48 @@ def main():
     capital = brokerage.get_trade_client().get_account_capital()
     # is in units
     positions = brokerage.get_trade_client().get_account_positions()
-    print('03: capital and positions',capital, positions)
-    
+    logger.debug(str(datetime.datetime.now())+'03: capital and positions:',capital, positions)
     """
     Get Position of Subsystems
     """ 
     subsystems_config = portfolio_config["subsystems"][brokerage_used]
     strats = {}
 
-
+    #get previous strategy runs
     
     for subsystem in subsystems_config.keys():
         if subsystem == "lbmom":
             strat = Lbmom(
                 instruments_config=portfolio_config["instruments_config"][subsystem][brokerage_used], 
                 historical_df=historical_data, 
+                historical_strategy_df = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem)),
+                #sim_start not currently implemented
                 simulation_start=sim_start, 
                 vol_target=VOL_TARGET, 
-                brokerage_used=brokerage_used
+                brokerage_used=brokerage_used,
+                logger = logger
             )
         elif subsystem == "lsmom":
             strat = Lsmom(
                 instruments_config=portfolio_config["instruments_config"][subsystem][brokerage_used], 
                 historical_df=historical_data, 
+                historical_strategy_df = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem)),
+                #sim_start not currently implemented
                 simulation_start=sim_start, 
                 vol_target=VOL_TARGET, 
-                brokerage_used=brokerage_used
+                brokerage_used=brokerage_used,
+                logger = logger
             )
         elif subsystem == "skprm":
             strat = Skprm(
                 instruments_config=portfolio_config["instruments_config"][subsystem][brokerage_used], 
                 historical_df=historical_data, 
+                historical_strategy_df = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem)),
+                #sim_start not currently implemented
                 simulation_start=sim_start, 
                 vol_target=VOL_TARGET, 
-                brokerage_used=brokerage_used
+                brokerage_used=brokerage_used,
+                logger = logger
             )
         else:
             print("unknown strat")
@@ -315,17 +347,20 @@ def main():
 
         strats[subsystem] = strat
     
-    print('04: ran subsystem')
+    logger.debug(str(datetime.datetime.now())+'04: declared subsystem')
     subsystems_dict = {}
     traded = []
     strategies_inactivated = []
 
     #variable decides if strategy will be ran today
     run_strat = True
+    strat_n = 0
     for k, v in strats.items():
-        #print("run: ", k, v)
+        strat_n +=1
+        logger.debug(str(datetime.datetime.now())+f'running strategy: {k}')
         strat_df, strat_inst = v.get_subsys_pos(debug=True, use_disk=use_disk)
-        run_strat = backtest_utils.run_strategy_classifier(database_df, strat_df, run_live_classifier)
+
+        #run_strat = backtest_utils.run_strategy_classifier(database_df, strat_df, run_live_classifier)
         
         if run_strat:
             traded += strat_inst
@@ -337,10 +372,10 @@ def main():
         else:
             strategies_inactivated.append(k)
     traded = list(set(traded))
-
+    logger.debug(str(datetime.datetime.now())+f'ran all individual strategies: {subsystems_dict.keys()}')
     # this is where trades are bundled together, in subsystems_dict
     portfolio_df = run_simulation(traded, historical_data, VOL_TARGET, subsystems_dict, subsystems_config, brokerage_used, debug=True, use_disk=use_disk)
-    print('05: ran simulation')
+    logger.debug(str(datetime.datetime.now())+'05: ran simulation')
 
     instruments_held = positions.keys()
     instruments_unheld = [inst for inst in traded if inst not in instruments_held]
@@ -363,7 +398,7 @@ def main():
         }
 
     #print(json.dumps(portfolio_optimal, indent=4))
-    print('06: got optimal allocations')
+    logger.debug(str(datetime.datetime.now())+'06: got optimal allocations')
     """
     Edit Open Positions    
     """
@@ -384,7 +419,7 @@ def main():
                 brokerage.get_trade_client().market_order(inst=inst_held, order_config=order_config)
         Printer.pretty(left="******************************************************\n", color=Colors.BLUE)
 
-    print('07: edited open positions')
+    logger.debug(str(datetime.datetime.now())+'07: edited open positions')
     """
     Open New positions
     """
@@ -402,7 +437,7 @@ def main():
                 brokerage.get_trade_client().market_order(inst=inst_unheld, order_config=order_config)
         Printer.pretty(left="******************************************************\n", color=Colors.YELLOW)
 
-    print('08: opened new positions and finished')
+    logger.debug(str(datetime.datetime.now())+'08: opened new positions and finished')
 
     #desired units
 

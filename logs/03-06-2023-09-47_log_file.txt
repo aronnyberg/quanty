@@ -1,0 +1,2 @@
+{'name': '__main__', 'msg': 'error message', 'args': (), 'levelname': 'DEBUG', 'levelno': 10, 'pathname': '/Users/aronnyberg/code/quanty/main.py', 'filename': 'main.py', 'module': 'main', 'exc_info': None, 'exc_text': None, 'stack_info': None, 'lineno': 60, 'funcName': '<module>', 'created': 1685782044.5426838, 'msecs': 542.6838397979736, 'relativeCreated': 3453.882932662964, 'thread': 8449942784, 'threadName': 'MainThread', 'processName': 'MainProcess', 'process': 1545, 'message': 'error message'}sctime)s - __main__ - DEBUG - error message
+

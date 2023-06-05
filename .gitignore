@@ -14,3 +14,4 @@
 /.DS_Store
 /backtests
 .ipynb_checkpoints
+app.log

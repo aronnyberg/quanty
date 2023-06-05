@@ -58,7 +58,7 @@ def get_sp500_df():
 
 #take an ohlcv df and add some other statistics
 def extend_dataframe(traded, df, fx_codes):
-    df.index = pd.Series(df.index).apply(lambda x: format_date(x)) 
+    #df.index = pd.Series(df.index).apply(lambda x: format_date(x)) 
     open_cols = list(map(lambda x: str(x) + " open", traded))
     high_cols = list(map(lambda x: str(x) + " high", traded))
     low_cols = list(map(lambda x: str(x) + " low", traded))
@@ -90,6 +90,8 @@ def format_date(date):
     #convert 2012-02-06 00:00:00 >> datetime.date(2012, 2, 6)
     yymmdd = list(map(lambda x: int(x), str(date).split(" ")[0].split("-")))
     return datetime.date(yymmdd[0], yymmdd[1], yymmdd[2])
+
+
 
 
 """
