@@ -58,7 +58,8 @@ def get_sp500_df():
 
 #take an ohlcv df and add some other statistics
 def extend_dataframe(traded, df, fx_codes):
-    df.index = pd.Series(df.index).apply(lambda x: format_date(x)) 
+    #hashed below with move to hourly 
+    #df.index = pd.Series(df.index).apply(lambda x: format_date(x)) 
     open_cols = list(map(lambda x: str(x) + " open", traded))
     high_cols = list(map(lambda x: str(x) + " high", traded))
     low_cols = list(map(lambda x: str(x) + " low", traded))

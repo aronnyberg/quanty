@@ -7,7 +7,7 @@
     },
     "database": {
         "dwx": "dwx_ohlcv.xlsx",
-        "oan": "oan_ohlcv.xlsx"
+        "oan": "oan_hourly_ohlcv.xlsx"
     },
 
     "order_enabled": true,

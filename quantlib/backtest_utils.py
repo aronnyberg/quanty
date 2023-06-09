@@ -124,9 +124,9 @@ def run_strategy_classifier(database_df, strat_df, run_live_classifier):
         full_train_length = len(strat_df)
         X, y = classifier_data_transform(database_df.head(full_train_length-1), strat_df.head(full_train_length-1))
         #retrain classifier
-        clf = pickle.load(open(filename, 'rb'))
+        #clf = pickle.load(open(filename, 'rb'))
         #new classifier
-        #clf = RandomForestClassifier(random_state=0)
+        clf = RandomForestClassifier(random_state=0)
         clf.fit(X, y)
         pickle.dump(clf, open(filename, 'wb'))
     if run_live_classifier == False:

@@ -105,10 +105,15 @@ class TradeClient():
         except Exception as err:
             pass
 
-    def format_date(self, series):
+    def format_date(self, series, hourly=False):
         #series in the form :: 2021-09-21T21:00:00.000000000Z
-        ddmmyy = series.split("T")[0].split("-")
-        return datetime.date(int(ddmmyy[0]), int(ddmmyy[1]), int(ddmmyy[2]))
+        if hourly:
+            ddmmyy = series.split("T")[0].split("-")
+            hours = series.split("T")[1].split(":")
+            return datetime.datetime(int(ddmmyy[0]), int(ddmmyy[1]), int(ddmmyy[2]), int(hours[0]), int(hours[1]))
+        else:
+            ddmmyy = series.split("T")[0].split("-")
+            return datetime.date(int(ddmmyy[0]), int(ddmmyy[1]), int(ddmmyy[2]))
 
     def get_ohlcv(self, instrument, count, granularity):
         try:
@@ -125,6 +130,25 @@ class TradeClient():
             ohlcv_df.reset_index(inplace=True) #once again we want to format the date and columns in the same way as we did for the extend_dataframe function for sp500 dataset
             ohlcv_df.columns = ["date", "open", "high", "low", "close", "volume"]
             ohlcv_df["date"] = ohlcv_df["date"].apply(lambda x: self.format_date(x)) #this is the format that yahoo finance API gave us, and we just need to add identifiers!
+            return ohlcv_df
+        except Exception as err:
+            print(err) #do some error handling
+    
+    def get_hourly_ohlcv(self, instrument, count, granularity):
+        try:
+            params = {"count": count, "granularity": granularity}
+            candles = instruments.InstrumentsCandles(instrument=instrument, params=params)
+            self.client.request(candles)
+            ohlcv_dict = candles.response["candles"]
+            ohlcv = pd.DataFrame(ohlcv_dict)
+            ohlcv = ohlcv[ohlcv["complete"]]
+            ohlcv_df = ohlcv["mid"].dropna().apply(pd.Series)
+            ohlcv_df["volume"] = ohlcv["volume"]
+            ohlcv_df.index = ohlcv["time"]
+            ohlcv_df = ohlcv_df.apply(pd.to_numeric)
+            ohlcv_df.reset_index(inplace=True) #once again we want to format the date and columns in the same way as we did for the extend_dataframe function for sp500 dataset
+            ohlcv_df.columns = ["date", "open", "high", "low", "close", "volume"]
+            ohlcv_df["date"] = ohlcv_df["date"].apply(lambda x: self.format_date(x, hourly=True)) #this is the format that yahoo finance API gave us, and we just need to add identifiers!
             return ohlcv_df
         except Exception as err:
             print(err) #do some error handling

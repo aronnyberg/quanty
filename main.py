@@ -209,7 +209,7 @@ def main():
     #if running test , only loads from disk
     # Instantiate the parser
     parser = argparse.ArgumentParser(description="Sets mode for main.py run")
-    parser.add_argument('--mode', metavar='mode', type=str,
+    parser.add_argument("--mode", type=str,
                     help='Optional argument indicating a quick test run (using disk data) or train (run classifier), else runs as normal (loads data, no training)',
                     required = False, default = "")
     args = parser.parse_args()
@@ -227,7 +227,7 @@ def main():
         again = True
         while again:
             try:
-                df = brokerage.get_trade_client().get_ohlcv(instrument=db_inst, count=30, granularity="D")
+                df = brokerage.get_trade_client().get_hourly_ohlcv(instrument=db_inst, count=30, granularity="H1")
                 df.set_index("date", inplace=True)
                 #print(db_inst, "\n", df)
                 cols = list(map(lambda x: "{} {}".format(db_inst, x), df.columns)) 

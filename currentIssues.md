@@ -16,4 +16,4 @@ Better method of asset allocation between strategies. Perhaps based on backtests
 -> Done but need to test
 
 ->Desperately need more strategies
--> Next
+-> Next is sorting simulation years, using historic strategy data
