@@ -56,7 +56,8 @@ class Skprm:
             historical_strategy_df.set_index('date', inplace=True)
             #historical_strategy_df.index = pd.to_datetime(historical_strategy_df.index, unit='H', dayfirst=True)
             historical_strategy_df.index = pd.to_datetime(historical_strategy_df.index, format='%d-%m-%Y-%H-%M')
-            historical_data = historical_data[historical_data.index > historical_strategy_df.index[-1]]
+            historical_data = historical_data.tail(200)
+            #historical_data = historical_data[historical_data.index > historical_strategy_df.index[-1]]
             historical_data = self.extend_historicals(instruments=instruments, historical_data=historical_data)
             
             portfolio_df = pd.DataFrame(index=historical_data[self.simulation_start:].index).reset_index()

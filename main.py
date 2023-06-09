@@ -111,12 +111,16 @@ def print_order_details(contracts):
 
 def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict, subsystems_config, brokerage_used, debug=True, use_disk=False):
     test_ranges = []
+    logger.debug(str(datetime.datetime.now())+f'first hist data shape {historical_data.shape}')
     for subsystem in subsystems_dict.keys():
         test_ranges.append(subsystems_dict[subsystem]["strat_df"].index)
     start = max(test_ranges, key=lambda x:[0])[0]
     if not use_disk:
+        logger.debug(str(datetime.datetime.now())+f'hist data shape {historical_data.shape}')
+        logger.debug(str(datetime.datetime.now())+f'hist data start shape {historical_data[start:].shape}')
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
         portfolio_df.loc[0, "capital"] = 10000
+        
 
         combined_strategies = pd.DataFrame()
         for subsystem in subsystems_config.keys():
@@ -128,7 +132,6 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
         combined_strategies.replace(0, np.nan, inplace=True)
         combined_strategies.dropna(inplace=True)
         weights, _, _ = optimal_portfolio(combined_strategies.T)
-
 
         """
         Run Simulation
@@ -146,7 +149,6 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                 strat_scalar = backtest_utils.get_strat_scaler(portfolio_df, lookback=100, vol_target=portfolio_vol, idx=i, default=strat_scalar)
 
             portfolio_df.loc[i, "strat scalar"] = strat_scalar
-
             """
             Get Positions
             """
@@ -163,7 +165,6 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
             #structure output is inst_units = {'inst':{'brokerage':weighted_instrument_units }}
 
 
-
             #adjust across brokerages
             nominal_total = 0            
             for inst in instruments:
@@ -176,6 +177,9 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
                     
 
                 position = combined_sizing * strat_scalar
+                logger.debug(str(datetime.datetime.now())+f'position is: {position}')
+                logger.debug(str(datetime.datetime.now())+f'this inst pulled through: {inst}')
+                logger.debug(str(datetime.datetime.now())+f'portfolio_df loc is: {portfolio_df.loc[i, "{} units".format(inst)]}')
                 portfolio_df.loc[i, "{} units".format(inst)] = position
                 if position != 0:
                     #total gross per asset
@@ -346,7 +350,7 @@ def main():
             exit()
 
         strats[subsystem] = strat
-    
+
     logger.debug(str(datetime.datetime.now())+'04: declared subsystem')
     subsystems_dict = {}
     traded = []
@@ -374,7 +378,9 @@ def main():
     traded = list(set(traded))
     logger.debug(str(datetime.datetime.now())+f'ran all individual strategies: {subsystems_dict.keys()}')
     # this is where trades are bundled together, in subsystems_dict
+    
     portfolio_df = run_simulation(traded, historical_data, VOL_TARGET, subsystems_dict, subsystems_config, brokerage_used, debug=True, use_disk=use_disk)
+    
     logger.debug(str(datetime.datetime.now())+'05: ran simulation')
 
     instruments_held = positions.keys()

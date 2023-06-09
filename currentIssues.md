@@ -20,3 +20,7 @@ Better method of asset allocation between strategies. Perhaps based on backtests
 -> Update gitignore
 
 -> Regime switching, test markowitz on distinct regimes? Binarr regime with classifier? Probably depends on n
+
+Need a data backup folder in case edits go wrong
+
+move run_simulation out of main
