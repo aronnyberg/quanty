@@ -11,7 +11,7 @@
     },
 
     "order_enabled": true,
-    "sim_years" : 1,
+    "sim_months" : 1,
     "vol_target" : 0.20,
 
     "instruments_config": {

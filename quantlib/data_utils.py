@@ -13,6 +13,9 @@ import pandas as pd
 #import yfinance as yf #python3 -m pip install yFinance,  not need anymore
 from bs4 import BeautifulSoup #python3 -m pip install bs4
 
+import logging
+logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
 def get_sp500_instruments():
     res = requests.get("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
     soup = BeautifulSoup(res.content,'lxml')
@@ -69,6 +72,8 @@ def extend_dataframe(traded, df, fx_codes):
     historical_data = historical_data[open_cols + high_cols + low_cols + close_cols + volume_cols] #get a df with ohlcv for all traded instruments
     historical_data.fillna(method="ffill", inplace=True) #fill missing data by first forward filling data, such that [] [] [] a b c [] [] [] becomes [] [] [] a b c c c c
     historical_data.fillna(method="bfill", inplace=True) #fill missing data by backward filling data, such that [] [] [] a b c c c c becomes a a a a b c c c c
+    historical_data.fillna(1, inplace = True)
+    logging.error(f"remove these assets: {historical_data.isna().any()[lambda x: x]}")
     for inst in traded:
         historical_data["{} % ret".format(inst)] = historical_data["{} close".format(inst)] / historical_data["{} close".format(inst)].shift(1) - 1 #close to close return statistic
         historical_data["{} % ret vol".format(inst)] = historical_data["{} % ret".format(inst)].rolling(25).std() #historical rolling standard deviation of returns as realised volatility proxy
@@ -89,6 +94,7 @@ def is_fx(inst, fx_codes):
 
 def format_date(date):
     #convert 2012-02-06 00:00:00 >> datetime.date(2012, 2, 6)
+    #not currently enacted
     yymmdd = list(map(lambda x: int(x), str(date).split(" ")[0].split("-")))
     return datetime.date(yymmdd[0], yymmdd[1], yymmdd[2])
 

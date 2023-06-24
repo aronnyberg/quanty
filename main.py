@@ -96,19 +96,17 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
         portfolio_df = pd.DataFrame(index=historical_data[start:].index).reset_index()
         portfolio_df.loc[0, "capital"] = 10000
 
-        subsystems_config
-        #HERE
-        combined_strategies = pd.DataFrame()
-        for subsystem in subsystems_config.keys():
-            each_strategy_backtest = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem))
-            each_strategy_backtest.set_index('date', inplace=True)
-            each_strategy_backtest = each_strategy_backtest['capital ret']
-            combined_strategies = pd.concat([combined_strategies, each_strategy_backtest], axis=1)
-        combined_strategies.columns = subsystems_dict.keys()
-        combined_strategies.replace(0, np.nan, inplace=True)
-        combined_strategies.dropna(inplace=True)
-        weights, _, _ = optimal_portfolio(combined_strategies.T)
-        combined_strategies.to_excel("testData.xlsx")
+        # combined_strategies = pd.DataFrame()
+        # for subsystem in subsystems_config.keys():
+        #     each_strategy_backtest = pd.read_excel("./backtests/{}_{}.xlsx".format(brokerage_used, subsystem))
+        #     each_strategy_backtest.set_index('date', inplace=True)
+        #     each_strategy_backtest = each_strategy_backtest['capital ret']
+        #     combined_strategies = pd.concat([combined_strategies, each_strategy_backtest], axis=1)
+        # combined_strategies.columns = subsystems_dict.keys()
+        # combined_strategies.replace(0, np.nan, inplace=True)
+        # combined_strategies.dropna(inplace=True)
+        # weights, _, _ = optimal_portfolio(combined_strategies.T)
+        # combined_strategies.to_excel("testData.xlsx")
 
 
         """
@@ -144,22 +142,33 @@ def run_simulation(instruments, historical_data, portfolio_vol, subsystems_dict,
             #structure output is inst_units = {'inst':{'brokerage':weighted_instrument_units }}
 
 
-
+            # USING MARKOWITZ WEIGHTS
             #adjust across brokerages
+            # nominal_total = 0            
+            # for inst in instruments:
+            #     combined_sizing = 0
+            #     for subsystem in subsystems_dict.keys():
+            #         #incrementally adding/subtracting the total assets for each instrument by strategy
+            #         #combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
+            #         #multiplying by 'weights' (markowitz derived allocations)
+            #         combined_sizing += inst_units[inst][subsystem] * weights[list(subsystems_dict.keys()).index(subsystem)]
+            #         logging.error(weights[list(subsystems_dict.keys()).index(subsystem)])
+
+            #     position = combined_sizing * strat_scalar
+            #     portfolio_df.loc[i, "{} units".format(inst)] = position
+            #     if position != 0:
+            #         #total gross per asset
+            #         nominal_total += abs(position * backtest_utils.unit_dollar_value(inst, historical_data, date))
+            
+
             nominal_total = 0            
             for inst in instruments:
                 combined_sizing = 0
                 for subsystem in subsystems_dict.keys():
-                    #incrementally adding/subtracting the total assets for each instrument by strategy
-                    #combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
-                    #multiplying by 'weights' (markowitz derived allocations)
-                    combined_sizing += inst_units[inst][subsystem] * weights[list(subsystems_dict.keys()).index(subsystem)]
-                    logging.error(weights[list(subsystems_dict.keys()).index(subsystem)])
-
+                    combined_sizing += inst_units[inst][subsystem] * subsystems_config[subsystem]
                 position = combined_sizing * strat_scalar
                 portfolio_df.loc[i, "{} units".format(inst)] = position
                 if position != 0:
-                    #total gross per asset
                     nominal_total += abs(position * backtest_utils.unit_dollar_value(inst, historical_data, date))
             
             # outputting instrument weights (abs(units)/units) giving % of portfolio assets
@@ -200,7 +209,7 @@ def main():
     """
     Load and Update the Database
     """
-    database_df = gu.load_file("./Data/{}_ohlcv.obj".format(brokerage_used))
+    #database_df = gu.load_file("./Data/{}_ohlcv.obj".format(brokerage_used))
     database_df = pd.read_excel("./Data/{}".format(db_file)).set_index("date")
     database_df = database_df.loc[~database_df.index.duplicated(keep="first")] 
 
@@ -227,7 +236,7 @@ def main():
         again = True
         while again:
             try:
-                df = brokerage.get_trade_client().get_hourly_ohlcv(instrument=db_inst, count=30, granularity="H1")
+                df = brokerage.get_trade_client().get_hourly_ohlcv(instrument=db_inst, count=50, granularity="H1")
                 df.set_index("date", inplace=True)
                 #print(db_inst, "\n", df)
                 cols = list(map(lambda x: "{} {}".format(db_inst, x), df.columns)) 
@@ -245,6 +254,7 @@ def main():
                     print("Check TCP Socket Connection, rerun application")
                     exit()
    
+    poll_df = poll_df.tail(50)
     database_df = database_df.loc[:poll_df.index[0]][:-1]
     #database_df = database_df.append(poll_df)
     database_df = pd.concat([database_df, poll_df],axis=0)
@@ -253,20 +263,23 @@ def main():
 
     #Saving as other file names for now
     database_df.to_excel("./Data/{}".format(db_file))
-    gu.save_file("./Data/{}_ohlcv.obj".format(brokerage_used), database_df)
+    #gu.save_file("./Data/{}_ohlcv.obj".format(brokerage_used), database_df)
     #database_df.to_excel("./Data/{}".format(db_file))
     #gu.save_file("./Data/{}_ohlcv.obj".format(brokerage_used), database_df)
     """
     Extend the Database
     """
-    historical_data = du.extend_dataframe(traded=db_instruments, df=database_df, fx_codes=brokerage_config["fx_codes"])
+    database_df = database_df.head(7400).tail(1000)
+    #11395
     
+    historical_data = du.extend_dataframe(traded=db_instruments, df=database_df, fx_codes=brokerage_config["fx_codes"])
     print('02: extended df')
     """
     Risk Parameters
     """
     VOL_TARGET = portfolio_config["vol_target"]
-    sim_start = datetime.date.today() - relativedelta(years=portfolio_config["sim_years"])
+    #sim_start = datetime.date.today() - relativedelta(months=portfolio_config["sim_months"])
+    sim_start = database_df.index[0]
 
     """
     Get existing positions and capital
@@ -283,7 +296,7 @@ def main():
     strats = {}
 
 
-    
+    historical_data.to_excel('historical_data.xlsx')
     for subsystem in subsystems_config.keys():
         if subsystem == "lbmom":
             strat = Lbmom(
